@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Presentation Grader</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    min-height: 100vh;
+    width: 100vw;
+  }
+
+  #lightScreen {
+    min-height: 100vh; width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: linear-gradient(180deg, #fff9f2 0%, #fdf3e7 100%);
+    color: #3a2e22; transition: opacity 0.6s ease; padding: 40px;
+    overflow-y: auto;
+  }
+  .title { font-size: 15px; font-weight: 600; color: #b8763a; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 40px; }
+
+  .orb-wrap { position: relative; width: 180px; height: 180px; display: flex; align-items: center; justify-content: center; margin-bottom: 32px; }
+  .orb {
+    width: 90px; height: 90px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #ffcf8a, #e8973e 65%, #c97427 100%);
+    box-shadow: 0 0 40px 10px rgba(232, 151, 62, 0.35);
+    transition: box-shadow 0.3s ease;
+  }
+  .orb.active { animation: pulse 1.6s ease-in-out infinite; }
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); box-shadow: 0 0 40px 10px rgba(232, 151, 62, 0.35); }
+    50% { transform: scale(1.12); box-shadow: 0 0 60px 18px rgba(232, 151, 62, 0.55); }
+  }
+  .ring {
+    position: absolute; border-radius: 50%; border: 1.5px solid rgba(232, 151, 62, 0.4);
+    animation: ripple 2.4s ease-out infinite;
+  }
+  .ring:nth-child(2) { animation-delay: 0.8s; }
+  @keyframes ripple {
+    0% { width: 90px; height: 90px; opacity: 0.6; }
+    100% { width: 180px; height: 180px; opacity: 0; }
+  }
+
+  .status-text { font-size: 15px; color: #8a7358; margin-bottom: 6px; min-height: 20px; }
+  .timer { font-size: 13px; color: #b8a688; font-variant-numeric: tabular-nums; margin-bottom: 44px; }
+
+  .controls { display: flex; gap: 14px; }
+  .btn {
+    padding: 13px 28px; border-radius: 999px; border: none; font-size: 14px; font-weight: 600;
+    cursor: pointer; transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-start { background: #e8973e; color: white; box-shadow: 0 4px 16px rgba(232, 151, 62, 0.35); }
+  .btn-start:hover { box-shadow: 0 6px 20px rgba(232, 151, 62, 0.45); }
+  .btn-stop { background: #3a2e22; color: white; }
+  .btn-stop:hover { background: #241b13; }
+  .btn-reveal {
+    background: #1c1712; color: #f0d9b5; margin-top: 28px;
+    border: 1px solid #4a3a26;
+  }
+  .btn-reveal:hover { background: #0f0c08; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .hidden { display: none !important; }
+
+  .chat-wrap { width: 100%; max-width: 560px; display: flex; flex-direction: column; align-items: center; }
+  .sent-confirm {
+    font-size: 13px; color: #b8926a; margin-bottom: 18px; display: flex; align-items: center; gap: 8px;
+  }
+  .sent-confirm .check {
+    width: 18px; height: 18px; border-radius: 50%; background: #4caf7d; color: white;
+    display: flex; align-items: center; justify-content: center; font-size: 11px;
+  }
+  .reply-bubble {
+    background: #ffffff; border: 1px solid #f0e3d0; border-radius: 18px; border-bottom-left-radius: 4px;
+    padding: 18px 22px; font-size: 15px; line-height: 1.55; color: #3a2e22;
+    box-shadow: 0 4px 20px rgba(180, 130, 60, 0.08); width: 100%;
+    animation: fadeUp 0.5s ease;
+  }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+  #revealScreen {
+    height: 100vh; overflow-y: auto; background: #0a0b10; color: #e6e6e6;
+    opacity: 0; transition: opacity 0.7s ease; padding: 48px 60px 80px; position: fixed; top: 0; left: 0; right: 0;
+  }
+  #revealScreen.show { opacity: 1; pointer-events: auto; }
+  #revealScreen:not(.show) { pointer-events: none; }
+  .reveal-header { font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px; color: #6c7280; margin-bottom: 4px; }
+  .reveal-title { font-size: 26px; font-weight: 700; margin-bottom: 36px; color: #f4f4f4; }
+
+  .section { margin-bottom: 30px; }
+  .section-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: #7c8ba1; margin-bottom: 12px; }
+
+  .metric-row { display: flex; gap: 14px; flex-wrap: wrap; }
+  .metric-card {
+    background: #14161f; border: 1px solid #23262f; border-radius: 10px;
+    padding: 14px 18px; min-width: 120px;
+  }
+  .metric-value { font-size: 22px; font-weight: 700; color: #f4f4f4; }
+  .metric-name { font-size: 11px; color: #7c8ba1; text-transform: uppercase; margin-top: 4px; }
+
+  .entity-tag {
+    display: inline-block; background: #2e2247; color: #c9a8ff; padding: 3px 10px;
+    border-radius: 5px; font-size: 12px; margin: 3px 5px 3px 0;
+  }
+
+  .transcript-box, .mapping-box {
+    background: #14161f; border: 1px solid #23262f; border-radius: 10px; padding: 16px 18px;
+    font-size: 14px; line-height: 1.6; color: #cfd3dc; font-family: inherit;
+  }
+  .mapping-box { font-family: 'Courier New', monospace; font-size: 12.5px; white-space: pre-wrap; color: #a8b0c0; }
+  .mapping-row { margin-bottom: 4px; }
+  .mapping-token { color: #c9a8ff; }
+  .mapping-arrow { color: #565b6b; margin: 0 8px; }
+  .mapping-real { color: #5ce6a6; }
+
+  .score-row { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 16px; }
+  .score-card {
+    background: #14161f; border: 1px solid #23262f; border-radius: 10px;
+    padding: 16px 20px; min-width: 130px; text-align: center;
+  }
+  .score-num { font-size: 28px; font-weight: 700; color: #5ce6a6; }
+  .score-label { font-size: 11px; color: #7c8ba1; text-transform: uppercase; margin-top: 6px; }
+
+  .summary-box, .suggestions-box {
+    background: #14161f; border: 1px solid #23262f; border-radius: 10px; padding: 16px 18px;
+    font-size: 14px; line-height: 1.6; color: #cfd3dc; margin-bottom: 16px;
+  }
+  .suggestions-box ul { padding-left: 20px; }
+  .suggestions-box li { margin-bottom: 6px; }
+
+  .judge-box {
+    background: #171208; border: 1px solid #3d2d1b; border-radius: 10px; padding: 16px 18px;
+    font-size: 13px; line-height: 1.6; color: #e0c9a0;
+  }
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 6px; font-size: 12px; font-weight: 700; margin-left: 8px; }
+  .badge.pass { background: #1b3d2c; color: #5ce6a6; }
+  .badge.flag { background: #3d1b1b; color: #ff6b6b; }
+</style>
+</head>
+<body>
+
+<div id="lightScreen">
+  <div class="title" id="topTitle">Presentation Grader</div>
+
+  <div id="recordingUI">
+    <div class="orb-wrap">
+      <div class="ring hidden" id="ring1"></div>
+      <div class="ring hidden" id="ring2"></div>
+      <div class="orb" id="orb"></div>
+    </div>
+    <div class="status-text" id="statusText">Ready when you are</div>
+    <div class="timer" id="timer"></div>
+    <div class="controls">
+      <button class="btn btn-start" id="startBtn">Start Listening</button>
+      <button class="btn btn-stop hidden" id="stopBtn">Stop &amp; Send</button>
+    </div>
+  </div>
+
+  <div class="chat-wrap hidden" id="chatWrap">
+    <div class="sent-confirm"><span class="check">✓</span> Presentation submitted, redacted, and reviewed</div>
+    <div class="reply-bubble" id="replyBubble"></div>
+    <button class="btn btn-reveal" id="revealBtn">Reveal what happened behind the scenes</button>
+  </div>
+</div>
+
+<div id="revealScreen">
+  <div class="reveal-header">Behind the scenes</div>
+  <div class="reveal-title">What just happened</div>
+  <div id="revealContent"></div>
+</div>
+
+<script>
+const API_URL = "http://localhost:8002";
+const lightScreen = document.getElementById("lightScreen");
+const revealScreen = document.getElementById("revealScreen");
+const recordingUI = document.getElementById("recordingUI");
+const chatWrap = document.getElementById("chatWrap");
+const orb = document.getElementById("orb");
+const ring1 = document.getElementById("ring1");
+const ring2 = document.getElementById("ring2");
+const statusText = document.getElementById("statusText");
+const timerEl = document.getElementById("timer");
+const startBtn = document.getElementById("startBtn");
+const stopBtn = document.getElementById("stopBtn");
+const revealBtn = document.getElementById("revealBtn");
+const replyBubble = document.getElementById("replyBubble");
+const revealContent = document.getElementById("revealContent");
+
+let timerInterval = null;
+let secondsElapsed = 0;
+let latestData = null;
+
+function formatTime(s) {
+  const m = Math.floor(s / 60).toString().padStart(2, "0");
+  const sec = (s % 60).toString().padStart(2, "0");
+  return `${m}:${sec}`;
+}
+
+startBtn.addEventListener("click", async () => {
+  startBtn.disabled = true;
+  statusText.textContent = "Starting...";
+  try {
+    await fetch(API_URL + "/start", { method: "POST" });
+    orb.classList.add("active");
+    ring1.classList.remove("hidden");
+    ring2.classList.remove("hidden");
+    statusText.textContent = "Listening...";
+    startBtn.classList.add("hidden");
+    stopBtn.classList.remove("hidden");
+    secondsElapsed = 0;
+    timerEl.textContent = formatTime(0);
+    timerInterval = setInterval(() => {
+      secondsElapsed++;
+      timerEl.textContent = formatTime(secondsElapsed);
+    }, 1000);
+  } catch (err) {
+    statusText.textContent = "Error: could not reach backend.";
+    startBtn.disabled = false;
+  }
+});
+
+stopBtn.addEventListener("click", async () => {
+  stopBtn.disabled = true;
+  orb.classList.remove("active");
+  ring1.classList.add("hidden");
+  ring2.classList.add("hidden");
+  clearInterval(timerInterval);
+  statusText.textContent = "Sending to the AI...";
+
+  try {
+    const res = await fetch(API_URL + "/stop", { method: "POST" });
+    const data = await res.json();
+    latestData = data;
+
+    if (data.status === "no speech captured") {
+      statusText.textContent = "No speech captured, try again.";
+      stopBtn.disabled = false;
+      startBtn.classList.remove("hidden");
+      stopBtn.classList.add("hidden");
+      return;
+    }
+
+    recordingUI.classList.add("hidden");
+    replyBubble.textContent = data.chat_reply;
+    chatWrap.classList.remove("hidden");
+  } catch (err) {
+    statusText.textContent = "Error processing results.";
+    stopBtn.disabled = false;
+  }
+});
+
+revealBtn.addEventListener("click", () => {
+  renderReveal(latestData);
+  lightScreen.style.opacity = "0";
+  setTimeout(() => {
+    lightScreen.classList.add("hidden");
+    revealScreen.classList.add("show");
+  }, 600);
+});
+
+function renderReveal(data) {
+  const m = data.metrics;
+  const pii = data.pii;
+  const g = data.grader;
+  const j = data.judge;
+
+  let html = "";
+
+  html += `<div class="section">
+    <div class="section-label">Speech Metrics (deterministic, no AI)</div>
+    <div class="metric-row">
+      <div class="metric-card"><div class="metric-value">${m.duration_seconds}s</div><div class="metric-name">Duration</div></div>
+      <div class="metric-card"><div class="metric-value">${m.words_per_minute}</div><div class="metric-name">Words/min</div></div>
+      <div class="metric-card"><div class="metric-value">${m.filler_count}</div><div class="metric-name">Filler words</div></div>
+      <div class="metric-card"><div class="metric-value">${m.longest_pause_seconds}s</div><div class="metric-name">Longest pause</div></div>
+    </div>
+  </div>`;
+
+  html += `<div class="section">
+    <div class="section-label">Step 1 &mdash; PII Detected (${pii.entities_found.length} entities)</div>
+    <div>${pii.entities_found.map(e => `<span class="entity-tag">${e.type}: "${e.text}" (${e.score})</span>`).join("") || "<span style='color:#7c8ba1'>None detected.</span>"}</div>
+  </div>`;
+
+  html += `<div class="section">
+    <div class="section-label">Step 2 &mdash; Redacted Transcript (this, and only this, is what the grading AI saw)</div>
+    <div class="transcript-box">${pii.redacted_transcript}</div>
+  </div>`;
+
+  if (g.parse_failure) {
+    html += `<div class="section"><div class="section-label">Step 3 &mdash; Grader</div><div class="judge-box">Grader output failed to parse: ${g.parse_failure}</div></div>`;
+  } else {
+    html += `<div class="section">
+      <div class="section-label">Step 3 &mdash; Grader's Evaluation (AI call #1, sees only the redacted text above)</div>
+      <div class="score-row">
+        <div class="score-card"><div class="score-num">${g.clarity}</div><div class="score-label">Clarity</div></div>
+        <div class="score-card"><div class="score-num">${g.structure}</div><div class="score-label">Structure</div></div>
+        <div class="score-card"><div class="score-num">${g.engagement}</div><div class="score-label">Engagement</div></div>
+        <div class="score-card"><div class="score-num">${g.technical_accuracy}</div><div class="score-label">Technical accuracy</div></div>
+      </div>
+      <div class="summary-box"><strong>Summary (as written by the grader, still redacted):</strong><br>${g.summary}</div>
+      <div class="suggestions-box"><strong>Suggestions:</strong><ul>${g.suggestions.map(s => `<li>${s}</li>`).join("")}</ul></div>
+    </div>`;
+
+    html += `<div class="section">
+      <div class="section-label">Step 4 &mdash; Judge's Verdict on the Grader (AI call #2, checks the grader, not the talk)
+        <span class="badge ${j.verdict === 'PASS' ? 'pass' : 'flag'}">${j.verdict}</span>
+      </div>
+      <div class="judge-box"><strong>Score: ${j.score}</strong><br>${j.reason}</div>
+    </div>`;
+  }
+
+  const mappingEntries = Object.entries(pii.mapping);
+  html += `<div class="section">
+    <div class="section-label">Step 5 &mdash; Rehydration Mapping (kept local, never sent anywhere; used only to turn the redacted reply you just read back into the natural one shown on the previous screen)</div>
+    <div class="mapping-box">${
+      mappingEntries.length
+        ? mappingEntries.map(([token, real]) => `<div class="mapping-row"><span class="mapping-token">${token}</span><span class="mapping-arrow">&rarr;</span><span class="mapping-real">${real}</span></div>`).join("")
+        : "No PII was found, nothing to remap."
+    }</div>
+  </div>`;
+
+  revealContent.innerHTML = html;
+}
+</script>
+
+</body>
+</html>

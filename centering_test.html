@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; }
+  body {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fdf3e7;
+  }
+  .dot {
+    width: 100px; height: 100px; border-radius: 50%;
+    background: red;
+  }
+  .crosshair {
+    position: fixed; top: 0; left: 50%; width: 1px; height: 100vh; background: blue;
+  }
+  .crosshair2 {
+    position: fixed; left: 0; top: 50%; height: 1px; width: 100vw; background: blue;
+  }
+</style>
+</head>
+<body>
+  <div class="crosshair"></div>
+  <div class="crosshair2"></div>
+  <div class="dot"></div>
+</body>
+</html>
