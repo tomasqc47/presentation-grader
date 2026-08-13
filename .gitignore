@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.deepeval/
+.env
+.env.local
+venv/
+.venv/
+*.log
+.DS_Store
