@@ -136,7 +136,7 @@ def redact_transcript(chunks: list[dict]) -> dict:
 
 if __name__ == "__main__":
     sample_chunks = [
-        {"text": "Hi everyone, my name is Tomas Silva and I work at Euronext.", "start_time": 0.0, "end_time": 5.0},
+        {"text": "Hi everyone, my name is Tomas Silva and I work at 123Corp.", "start_time": 0.0, "end_time": 5.0},
         {"text": "You can reach me at 912 345 678 if you have questions.", "start_time": 5.5, "end_time": 10.0},
     ]
 
